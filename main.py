@@ -27,11 +27,14 @@ class ServerNode(ABC):
     def get_role(self):
         pass
 
+
 class WebServer(ServerNode):
     def get_role(self): return "веб сервер"
 
+
 class DatabaseServer(ServerNode):
     def get_role(self): return "База даних сервер"
+
 
 class ServerFactory:
     @staticmethod
@@ -42,17 +45,21 @@ class ServerFactory:
             return DatabaseServer(name, config)
         raise ValueError("невідомий тип")
 
+
 class DeployStrategy(ABC):
     @abstractmethod
     def deploy(self, server: ServerNode): pass
+
 
 class AnsibleDeploy(DeployStrategy):
     def deploy(self, server: ServerNode):
         print(f"[Ansible] Deploy to {server.name}...")
 
+
 class TerraformDeploy(DeployStrategy):
     def deploy(self, server: ServerNode):
         print(f"[Terraform] Create infra {server.name}...")
+
 
 class DeploymentContext:
     def __init__(self, strategy: DeployStrategy):
@@ -60,6 +67,33 @@ class DeploymentContext:
 
     def execute_deploy(self, server: ServerNode):
         self.strategy.deploy(server)
+
+
+class ServerOperation(ABC):
+    @abstractmethod
+    def operate(self): pass
+
+
+class BasicServerOperation(ServerOperation):
+    def __init__(self, server: ServerNode):
+        self.server = server
+
+    def operate(self):
+        return f"[{self.server.name}] Basic operation is working."
+
+
+class ServerDecorator(ServerOperation):
+    def __init__(self, wrapped: ServerOperation):
+        self.wrapped = wrapped
+
+    def operate(self):
+        return self.wrapped.operate()
+
+
+class PrometheusExporterDecorator(ServerDecorator):
+    def operate(self):
+        base_op = self.wrapped.operate()
+        return f"{base_op} + Export metric is enabled."
 
 
 def main():
@@ -82,6 +116,10 @@ def main():
 
     deployer.strategy = AnsibleDeploy()
     deployer.execute_deploy(db_node)
+
+    basic_web = BasicServerOperation(web_node)
+    monitored_web = PrometheusExporterDecorator(basic_web)
+    print(monitored_web.operate())
 
 if __name__ == '__main__':
     main()
