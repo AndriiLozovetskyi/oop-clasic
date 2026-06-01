@@ -42,6 +42,24 @@ class ServerFactory:
             return DatabaseServer(name, config)
         raise ValueError("невідомий тип")
 
+class DeployStrategy(ABC):
+    @abstractmethod
+    def deploy(self, server: ServerNode): pass
+
+class AnsibleDeploy(DeployStrategy):
+    def deploy(self, server: ServerNode):
+        print(f"[Ansible] Deploy to {server.name}...")
+
+class TerraformDeploy(DeployStrategy):
+    def deploy(self, server: ServerNode):
+        print(f"[Terraform] Create infra {server.name}...")
+
+class DeploymentContext:
+    def __init__(self, strategy: DeployStrategy):
+        self.strategy = strategy
+
+    def execute_deploy(self, server: ServerNode):
+        self.strategy.deploy(server)
 
 
 def main():
@@ -58,6 +76,12 @@ def main():
 
     print(f"Created: {web_node.name} | Role: {web_node.get_role()} | Config: [{web_node.config}]")
     print(f"Created: {db_node.name}  | Role: {db_node.get_role()} | Config: [{db_node.config}]")
+
+    deployer = DeploymentContext(TerraformDeploy())
+    deployer.execute_deploy(web_node)
+
+    deployer.strategy = AnsibleDeploy()
+    deployer.execute_deploy(db_node)
 
 if __name__ == '__main__':
     main()
