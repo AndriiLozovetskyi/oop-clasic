@@ -96,6 +96,24 @@ class PrometheusExporterDecorator(ServerDecorator):
         return f"{base_op} + Export metric is enabled."
 
 
+class LegacySyslog:
+    def log_message(self, msg):
+        print(f"[SYSLOG_LEGACY_DAEMON] {msg}")
+
+
+class ModernLoggerInterface(ABC):
+    @abstractmethod
+    def info(self, msg): pass
+
+
+class SyslogAdapter(ModernLoggerInterface):
+    def __init__(self, legacy_logger: LegacySyslog):
+        self.legacy_logger = legacy_logger
+
+    def info(self, msg):
+        self.legacy_logger.log_message(f"INFO: {msg}")
+
+
 def main():
     print("Прототип")
     base_nixos_config = ServerConfig("NixOS", 4, 16)
@@ -120,6 +138,10 @@ def main():
     basic_web = BasicServerOperation(web_node)
     monitored_web = PrometheusExporterDecorator(basic_web)
     print(monitored_web.operate())
+
+    legacy_syslog = LegacySyslog()
+    logger = SyslogAdapter(legacy_syslog)
+    logger.info("Усі конфігурації успішно застосовані.")
 
 if __name__ == '__main__':
     main()
