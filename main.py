@@ -192,6 +192,26 @@ class ServerInventory:
         raise StopIteration
 
 
+class Expression(ABC):
+    @abstractmethod
+    def interpret(self, context: str) -> bool: pass
+
+class RoleExpression(Expression):
+    def __init__(self, role):
+        self.role = role
+
+    def interpret(self, context: str) -> bool:
+        return self.role in context
+
+class AndExpression(Expression):
+    def __init__(self, expr1: Expression, expr2: Expression):
+        self.expr1 = expr1
+        self.expr2 = expr2
+
+    def interpret(self, context: str) -> bool:
+        return self.expr1.interpret(context) and self.expr2.interpret(context)
+
+
 def main():
     print("Прототип")
     base_nixos_config = ServerConfig("NixOS", 4, 16)
@@ -239,6 +259,14 @@ def main():
     print("Інвентаризація вузлів:")
     for srv in inventory:
         print(f" - {srv.name}")
+
+    is_web = RoleExpression("Web")
+    is_server = RoleExpression("Server")
+    is_web_server = AndExpression(is_web, is_server)
+
+    context_string = web_node.get_role()  # Видасть "Web Server"
+    print(f"Контекст: '{context_string}'")
+    print(f"Чи відповідає правилу (Web AND Server)? -> {is_web_server.interpret(context_string)}")
 
 if __name__ == '__main__':
     main()
