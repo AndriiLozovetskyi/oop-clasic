@@ -113,6 +113,27 @@ class SyslogAdapter(ModernLoggerInterface):
     def info(self, msg):
         self.legacy_logger.log_message(f"INFO: {msg}")
 
+class SnapshotMemento:
+    def __init__(self, state):
+        self.state = state
+
+class StatefulServer:
+    def __init__(self, name):
+        self.name = name
+        self.state = "Stopped"
+
+    def set_state(self, state):
+        print(f"[{self.name}] Зміна стану на: {state}")
+        self.state = state
+
+    def save(self) -> SnapshotMemento:
+        print(f"[{self.name}] Створення знімка стану (Snapshot)...")
+        return SnapshotMemento(self.state)
+
+    def restore(self, memento: SnapshotMemento):
+        self.state = memento.state
+        print(f"[{self.name}] Відкат до знімка. Поточний стан: {self.state}")
+
 
 def main():
     print("Прототип")
@@ -142,6 +163,13 @@ def main():
     legacy_syslog = LegacySyslog()
     logger = SyslogAdapter(legacy_syslog)
     logger.info("Усі конфігурації успішно застосовані.")
+
+    state_server = StatefulServer("AppServer-01")
+    state_server.set_state("Updating Packages")
+    snapshot = state_server.save()
+
+    state_server.set_state("Kernel Panic")
+    state_server.restore(snapshot)
 
 if __name__ == '__main__':
     main()
