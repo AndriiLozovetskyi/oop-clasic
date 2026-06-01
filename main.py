@@ -113,9 +113,11 @@ class SyslogAdapter(ModernLoggerInterface):
     def info(self, msg):
         self.legacy_logger.log_message(f"INFO: {msg}")
 
+
 class SnapshotMemento:
     def __init__(self, state):
         self.state = state
+
 
 class StatefulServer:
     def __init__(self, name):
@@ -134,21 +136,27 @@ class StatefulServer:
         self.state = memento.state
         print(f"[{self.name}] Відкат до знімка. Поточний стан: {self.state}")
 
+
 class Command(ABC):
     @abstractmethod
     def execute(self): pass
 
+
 class StartServerCommand(Command):
     def __init__(self, server: StatefulServer):
         self.server = server
+
     def execute(self):
         self.server.set_state("Running")
+
 
 class BackupServerCommand(Command):
     def __init__(self, server: StatefulServer):
         self.server = server
+
     def execute(self):
         return self.server.save()
+
 
 class MacroCommand(Command):
     def __init__(self):
@@ -163,6 +171,26 @@ class MacroCommand(Command):
         for cmd in self.commands:
             results.append(cmd.execute())
         return results
+
+
+class ServerInventory:
+    def __init__(self):
+        self.servers = []
+
+    def add_server(self, server: ServerNode):
+        self.servers.append(server)
+
+    def __iter__(self):
+        self._index = 0
+        return self
+
+    def __next__(self):
+        if self._index < len(self.servers):
+            result = self.servers[self._index]
+            self._index += 1
+            return result
+        raise StopIteration
+
 
 def main():
     print("Прототип")
@@ -204,6 +232,13 @@ def main():
     macro.add_command(StartServerCommand(state_server))
     macro.add_command(BackupServerCommand(state_server))
     macro.execute()
+
+    inventory = ServerInventory()
+    inventory.add_server(web_node)
+    inventory.add_server(db_node)
+    print("Інвентаризація вузлів:")
+    for srv in inventory:
+        print(f" - {srv.name}")
 
 if __name__ == '__main__':
     main()
