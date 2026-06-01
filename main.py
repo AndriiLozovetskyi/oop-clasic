@@ -134,6 +134,35 @@ class StatefulServer:
         self.state = memento.state
         print(f"[{self.name}] Відкат до знімка. Поточний стан: {self.state}")
 
+class Command(ABC):
+    @abstractmethod
+    def execute(self): pass
+
+class StartServerCommand(Command):
+    def __init__(self, server: StatefulServer):
+        self.server = server
+    def execute(self):
+        self.server.set_state("Running")
+
+class BackupServerCommand(Command):
+    def __init__(self, server: StatefulServer):
+        self.server = server
+    def execute(self):
+        return self.server.save()
+
+class MacroCommand(Command):
+    def __init__(self):
+        self.commands = []
+
+    def add_command(self, command: Command):
+        self.commands.append(command)
+
+    def execute(self):
+        print("Виконання макрокоманди:")
+        results = []
+        for cmd in self.commands:
+            results.append(cmd.execute())
+        return results
 
 def main():
     print("Прототип")
@@ -170,6 +199,11 @@ def main():
 
     state_server.set_state("Kernel Panic")
     state_server.restore(snapshot)
+
+    macro = MacroCommand()
+    macro.add_command(StartServerCommand(state_server))
+    macro.add_command(BackupServerCommand(state_server))
+    macro.execute()
 
 if __name__ == '__main__':
     main()
